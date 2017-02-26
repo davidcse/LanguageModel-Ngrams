@@ -114,12 +114,10 @@ def calculate_perplexity(dev_set_corpus):
         test_probabilities = generate_interpolation_lambda_probabilities(word1,word2)
         for i in range(len(test_probabilities)):
             perplexities[i] = perplexities[i] + math.log(test_probabilities[i],2)
-#        print(word1 + " - " + word2)
-#        print(inverse_probability_lists)
+    # apply formula for perplexities
     for i in range(len(perplexities)):
         exponent_formula = -1/len(sequence) * perplexities[i]
         perplexities[i] = 2 ** exponent_formula
-        #print("exponent_formula:" + str(exponent_formula) + "\nperplexities:" + str(perplexities[i]) + "\n")
     return perplexities
 
 
@@ -196,8 +194,10 @@ unigram_file.close()
 top_bigrams_file = open("top-bigrams.txt","w")
 joint_prob_array.sort(key=operator.itemgetter(1))
 joint_prob_array.reverse()
-print(joint_prob_array)
 top_bigram_tuples = joint_prob_array[:20]
 for tup in top_bigram_tuples:
-    top_bigrams_file.write(tup[0][0] + "\t" + tup[0][1] + "\t" + str(tup[1]) + "\n")
+    first_word = tup[0][0]
+    second_word = tup[0][1]
+    joint_prob = str(tup[1])
+    top_bigrams_file.write(first_word + "\t" + second_word + "\t" + joint_prob + "\n")
 top_bigrams_file.close()
