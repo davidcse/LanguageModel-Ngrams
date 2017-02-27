@@ -56,6 +56,8 @@ def probability_mle(word1,word2):
     else:
         return 0 # value error
 
+
+# calculates the ad probabilities for Pr_AD(word2 | word 1)
 def probability_ad(word1,word2):
     global bigram_tuple_dict
     global unigram_dict
@@ -66,6 +68,7 @@ def probability_ad(word1,word2):
     else:
         return 0 # value error
 
+# calculates the laplace smoothed probabilities for Pr_L(word2 | word1)
 def probability_laplace_bigram(word1,word2):
     global bigram_tuple_dict
     global unigram_dict
@@ -82,6 +85,7 @@ def probability_laplace_bigram(word1,word2):
     return (count_bigram + 1) / (count_unigram + vocabulary_size + 1)
 
 
+# calculates the laplace smoothed probabilities for Pr_L(word) using unigram data.
 def probability_laplace_unigram(word):
     global unigram_dict
     vocabulary_size = len(list(unigram_dict.keys()))
@@ -121,6 +125,9 @@ def calculate_perplexity(dev_set_corpus):
     return perplexities
 
 
+# generates the Pr_Interpolated(word2 | word1) for each lambda : [0.1, 0.3, 0.5, 0.7, 0.9]
+# We will return the array of probabilities of (word2|word1) on each lambda for now.
+# We will use the output to calculate optimal lambda values later.
 def generate_interpolation_lambda_probabilities(word1,word2):
     prob_mle = probability_mle(word1,word2)
     prob_laplace_unigram = probability_laplace_unigram(word2)
@@ -129,14 +136,14 @@ def generate_interpolation_lambda_probabilities(word1,word2):
         lambda_factor = i / 10    # test for lambda = 0.1,0.3,0.5,0.7,0.9
         prob_interpolation = (lambda_factor * prob_mle) + ((1-lambda_factor) * prob_laplace_unigram)
         interpolation_prob_array.append(prob_interpolation)
-#    print(word1 + " - " + word2)
-#    print(interpolation_prob_array)
     return interpolation_prob_array
 
+# After generating the lambda_probabilities array, the caller of the function will choose
+# which lambda probability to return, that will give the lowest perplexity (maximum probability).
+# lambda_index: {0 : lambda=0.1 },{ 1 : lambda = 0.3} ,{ 2 : lambda=0.5}, {3 : lambda = 0.7}, {4 : lambda = 0.9}
 def probability_interpolation(word1,word2,lambda_index):
     lambda_probabilities = generate_interpolation_lambda_probabilities(word1,word2)
     return lambda_probabilities[lambda_index]
-
 
 #####################
 #       SCRIPT      #
@@ -162,7 +169,10 @@ try:
 except FileNotFoundError:
     print("Could not find dev.txt in this directory")
     exit()
+
+# calculate the perplexities. perplexities = array[0:4] where each index is corresponding to lambda 0.1 - 0.9, interval step = 0.2
 perplexities = calculate_perplexity(dev_set_corpus)
+# find which index of the lambda_probabilities will give the lowest perplexity value.
 index_of_min_lambda = perplexities.index(min(perplexities))
 
 # BUILD THE BIGRAM.LM FILE
@@ -171,13 +181,22 @@ for bigram in bigram_tuple_dict.keys():
     first_word = bigram[0]
     second_word = bigram[1]
     bigram_count = bigram_tuple_dict[bigram]
+    # use functions to calculate probabilities to write to file.
     prob_mle = probability_mle(first_word,second_word)
+    # Calculate PrL(y|x)
     prob_laplace_bigram = probability_laplace_bigram(first_word,second_word)
+    # Calculate PrL(x)
     prob_laplace_unigram = probability_laplace_unigram(first_word)
+    # PrL(x,y) = PrL(x) * PrL(y|x)
     joint_laplace_prob = prob_laplace_unigram * prob_laplace_bigram
+    # store PrL(x,y), to display as top 20 bigrams later.
     joint_prob_array.append((bigram, joint_laplace_prob))
+    # PrInt(y|x) = λPrMLE(y|x) + (1−λ)PrL(y).
+    # index_of_min_lambda is the index containing the probability calculation using lambda that minimizes perplexity
     prob_interp = probability_interpolation(first_word,second_word,index_of_min_lambda)
+    # PrAD =  count(x,y) − D / #(x) where D = 0.5 
     prob_ad = probability_ad(first_word,second_word)
+    # write to file, separating each column by tabs
     line = str(first_word)+"\t"+str(second_word)+"\t"+str(bigram_count)+"\t"+str(prob_mle)+"\t"+ str(prob_laplace_bigram)+"\t"+str(prob_interp)+"\t"+str(prob_ad)+"\n"
     bigram_file.write(line)
 bigram_file.close()
@@ -194,7 +213,21 @@ unigram_file.close()
 top_bigrams_file = open("top-bigrams.txt","w")
 joint_prob_array.sort(key=operator.itemgetter(1))
 joint_prob_array.reverse()
-top_bigram_tuples = joint_prob_array[:20]
+
+# GET THE TOP 20 BIGRAMS
+top_bigram_tuples = []
+result_count = 0
+for i in range(len(joint_prob_array)):
+    if result_count > 19 :
+        break
+    first_word = joint_prob_array[i][0][0]
+    second_word = joint_prob_array[i][0][1]
+    if(first_word =="<s>" or first_word == "</s>" or second_word == "<s>" or second_word == "</s>"):
+        continue
+    top_bigram_tuples.append(joint_prob_array[i])
+    result_count = result_count + 1
+
+# WRITE THE TOP 20 RESULTS TO FILE
 for tup in top_bigram_tuples:
     first_word = tup[0][0]
     second_word = tup[0][1]

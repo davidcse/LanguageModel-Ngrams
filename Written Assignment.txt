@@ -1,0 +1,40 @@
+Q1)
+In order to compute Pr_AD(y|x) for cases when (x,y) = 0, we have to use a mix of other methods of smoothing.
+This is because if we subtract the discounting factor, which in our case is D=0.5, we would have a negative number, which is unacceptable for a probability p.
+All proababilities p must have a lower bound of 0 and upper bound of 1.
+By using a mix of other smoothing techniques, such as Katz-Backoff, we are able to account for the unseen events (x,y), by stealing some of the
+probability mass from the probabilities of seen events. Since in calculating the probabilities of seen events, we subtract the discount ratio,
+some of the probability mass can be re-distributed for the times when we haven't seen an event, count(x,y) = 0.
+In our case of katz-backoff smoothing, we used the product of the alpha and beta functions for x and y, respectively.
+
+Since alpha equals 1 - (sum PR_AD of words following x), we are allocating the aggregate sum of discounted probability mass,
+that we subtracted when we were calculating Pr_AD of the seen counts following x.
+Because in calculating the absolute discounting probability, we subtract the discount ratio, Pr_AD = #(x,y)-D/#(x).
+1 - sum of (#(x,y) - D) / #(x)
+The subtraction from 1, would negate the subtraction of D in the above.
+Therefore, the resulting value of that operation would include the sum of the aggregated discount values, in addition to the
+total probabilities of words not following X.
+To re-iterate, alpha contains the probability of words not following x, and all the discounted mass too.
+
+In beta, it is equal to  (laplace unigram probability of y) / (sum of laplace unigram probability of words not following x).
+When we multiply alpha and beta together, we're re-distributing the discount values we stored in alpha, amongst the laplace unigram probabilities of
+the unseen words following x. This gives us the average unit of distribution, of the probability mass we have in alpha, shared amongst each word not following x.
+In the final step, we multiply this unit of shared probability mass by the laplace unigram probability of y, which is also in the numerator.
+In this sense, we get to re-distribute that unit portion of probability mass to y,
+in the same rate that we would redistribute the probability mass to any other word not following x.
+
+This gets us the katz backoff probability for new unseen events. By simply redistributing the discount value, and
+the chances of words not following x, we keep the distribution equal to 1 and validates it to be a probability distribution.
+
+
+Q2)
+Because the simple MLE probability is not a good model for when new words are seen, as that would lead to a numerator of 0,
+we use the laplace smoothing technique in order to steal probability mass from our previous MLE distributions.
+Albeit, this must be a really small amount.
+
+In the case of encountering an unseen word, UNK, we can give value to that encounter by a miniscule small amount if we
+pretend that we have seen that new token UNK, along with every single word in our previous vocabulary one more time.
+This is where the value V comes from, which is all the previous words in our dictionary.
+However, we also have to add the new token, UNK, into our vocabulary now. This is why we maintain that V' = V +1,
+where V' is the new vocabulary when we see and include the new token. By adding one, we eliminate zero probabilities, thus ensuring that
+the probability sum is equal to 1. That is why laplace smoothing is considered a probability distribution.

@@ -2,36 +2,62 @@ from sys import argv
 import math
 from functools import reduce
 
+# Dictionaries storing file probability data.
+unigram_data_dict = {}
+bigram_data_dict = {}
+
+# Uses the perplexity formula, provided that you give it a calculated sum probability component for the formula.
+# Also, needs the sequence length, N, to take the nth root.
 def perplexity_formula(probability_sum, sequence_length):
     inverse_seq = -1/sequence_length
     return 2**(inverse_seq * probability_sum)
 
+# calculates the laplace probability for a single word.
+# uses global variables that are calculations derived from the
+# language model files that were opened and parsed.
+def unigram_laplace_prob_calculation(word):
+    global unigram_data_dict
+    global total_token
+    vocabulary_size = len(list(unigram_data_dict.keys()))
+    if word in unigram_data_dict:
+        unigram_data = unigram_data_dict[word]
+        count_addone = int(unigram_data[1]) + 1
+        unigram_laplace_prob = count_addone/(total_token + vocabulary_size + 1)
+    else:
+        unigram_laplace_prob = 1/(total_token + vocabulary_size + 1)
+    return unigram_laplace_prob
+
+
+# Open the file and read the data in the file. Also take user input choice.
 try:
     script, bigram_file, unigram_file, test_file = argv
 except ValueError:
     print("Please run program with following format : 1)bigram.lm  2)unigram.lm  3)test file as parameters via the commandline")
     exit()
 
-unigram_data_dict = {}
-bigram_data_dict = {}
 
 ######## READ DATA FILES AND CREATE LOOKUP MAPS ########
 bigram_file = open(bigram_file.strip(),"r")
 unigram_file = open(unigram_file.strip(),"r")
 bigram_prob_data = bigram_file.read().split("\n")
 unigram_prob_data = unigram_file.read().split("\n")
+bigram_file.close()
+unigram_file.close()
+
+# parse data line by line for bigram.lm
 for i in range(len(bigram_prob_data)):
     line = bigram_prob_data[i].split()
-    if(len(line) == 0):
+    if(len(line) == 0): # skip empty lines
         continue
     bigram_data_dict[(line[0],line[1])] = line
+
+# parse data line by line for unigram.lm
 for i in range(len(unigram_prob_data)):
     line = unigram_prob_data[i].split()
     if(len(line) == 0):
         continue
     unigram_data_dict[line[0]] = line
-bigram_file.close()
-unigram_file.close()
+
 
 #### GET TEST DATA
 test_file = open(test_file.strip(),"r")
@@ -73,17 +99,6 @@ for i in unigram_data_dict:
     count_array.append(int(unigram_data_dict[i][1]))
 total_token = reduce(lambda x,y : x + y, count_array)
 
-def unigram_laplace_prob_calculation(word):
-    global unigram_data_dict
-    global total_token
-    vocabulary_size = len(list(unigram_data_dict.keys()))
-    if word in unigram_data_dict:
-        unigram_data = unigram_data_dict[word]
-        count_addone = int(unigram_data[1]) + 1
-        unigram_laplace_prob = count_addone/(total_token + vocabulary_size + 1)
-    else:
-        unigram_laplace_prob = 1/(total_token + vocabulary_size + 1)
-    return unigram_laplace_prob
 
 
 ##### CALCULATE BIGRAM PROBABILITIES SUMS
@@ -112,5 +127,5 @@ laplace_bigram_perplexity = perplexity_formula(laplace_bigram_sum, len(sequence)
 interpolation_perplexity = perplexity_formula(interpolation_bigram_sum, len(sequence))
 laplace_unigram_perplexity = perplexity_formula(laplace_unigram_sum, len(sequence))
 print("Laplace Bigram Perplexity : " + str(laplace_bigram_perplexity))
-print("Interpolation Perplexity : " + str(interpolation_perplexity))
+print("Interpolated Bigram Perplexity : " + str(interpolation_perplexity))
 print("Laplace Unigram Perplexity : " + str(laplace_unigram_perplexity))
